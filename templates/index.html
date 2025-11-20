@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Daily AI Papers</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: #0b1020; color: #e6e9ef; }
+    .container { max-width: 1100px; }
+    .paper-card { background: #121834; border: 1px solid #1c2450; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+    .paper-header { display: flex; gap: 18px; align-items: center; }
+    .thumb { width: 96px; height: 96px; border-radius: 12px; background: #0f1430; border: 1px solid #1c2450; object-fit: cover; }
+    .title { font-size: 1.25rem; font-weight: 700; color: #fff; }
+    .meta { color: #a9b1c7; font-size: 0.9rem; }
+    .section-title { font-weight: 700; color: #a7d0ff; font-size: 0.95rem; letter-spacing: .2px; }
+    .chip { display: inline-block; background: #0f1430; border: 1px solid #24306b; color: #cdd7f0; padding: 6px 10px; border-radius: 999px; font-size: .85rem; }
+    .btn-primary { background: linear-gradient(135deg,#4c7fff,#8a5cff); border: none; box-shadow: 0 8px 20px rgba(76,127,255,.35); }
+    a { text-decoration: none; }
+  </style>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+  <div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h1 class="fw-bold mb-1">Top 5 Daily Papers</h1>
+        <div class="meta">Source: Hugging Face Daily Papers</div>
+      </div>
+      <a class="btn btn-primary" href="https://huggingface.co/papers" target="_blank">Browse on Hugging Face</a>
+    </div>
+
+    <div class="row g-4">
+      {% for item in items %}
+      <div class="col-12">
+        <div class="paper-card p-4">
+          <div class="paper-header mb-3">
+            {% if item.thumbnail %}
+              <img class="thumb" src="{{ item.thumbnail }}" alt="thumbnail">
+            {% else %}
+              <div class="thumb"></div>
+            {% endif %}
+            <div>
+              <div class="title">{{ item.title }}</div>
+              <div class="meta">{{ item.titleZh }}</div>
+              <div class="meta">{{ item.authors }} · {{ item.publishedAt }}</div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <div class="section-title mb-2">English Summary</div>
+            <div class="mb-2"><strong>Issue:</strong> {{ item.summary.en.issue }}</div>
+            <div class="mb-2"><strong>Solution:</strong> {{ item.summary.en.solution }}</div>
+            <div class="mb-2"><strong>Steps:</strong></div>
+            <ul class="mb-3">
+              {% for s in item.summary.en.steps %}
+              <li>{{ s }}</li>
+              {% endfor %}
+            </ul>
+            <div class="mb-2"><strong>Impact:</strong> {{ item.summary.en.impact }}</div>
+          </div>
+
+          <div class="mb-4">
+            <div class="section-title mb-2">中文摘要</div>
+            <div class="mb-2"><strong>问题:</strong> {{ item.summary.zh.issue }}</div>
+            <div class="mb-2"><strong>方案:</strong> {{ item.summary.zh.solution }}</div>
+            <div class="mb-2"><strong>步骤:</strong></div>
+            <ul class="mb-3">
+              {% for s in item.summary.zh.steps %}
+              <li>{{ s }}</li>
+              {% endfor %}
+            </ul>
+            <div class="mb-2"><strong>影响:</strong> {{ item.summary.zh.impact }}</div>
+          </div>
+
+          <div class="d-flex gap-2 align-items-center">
+            <a class="chip" href="{{ item.arxiv }}" target="_blank">View on arXiv</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
