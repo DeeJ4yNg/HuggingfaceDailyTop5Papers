@@ -9,6 +9,8 @@ Fetches the top 5 daily papers from Hugging Face Daily Papers API, downloads the
 - Full-context summarization via an OpenAI-compatible Chat Completions API.
 - Bilingual output: English summary is translated into Simplified Chinese.
 - Clean, responsive UI built with Bootstrap.
+- Paper caching system to avoid redundant processing
+- Async processing for improved performance
 
 ## Prerequisites
 - Python 3.10+ (3.11 recommended)
@@ -29,7 +31,7 @@ Fetches the top 5 daily papers from Hugging Face Daily Papers API, downloads the
    ```
 3. Run the server:
    ```powershell
-   .\.venv\Scripts\python.exe app.py
+   .\.venv\Scripts\python.exe main.py
    ```
 4. Open `http://127.0.0.1:7860/`.
 
@@ -41,7 +43,7 @@ pip install -r requirements.txt
 export OPENAI_API_KEY="<your_key>"
 export OPENAI_API_BASE="<https://your.openai-compatible.endpoint>"
 export OPENAI_MODEL="gpt-4o-mini"
-python app.py
+python main.py
 ```
 Visit `http://127.0.0.1:7860/`.
 
@@ -49,17 +51,19 @@ Visit `http://127.0.0.1:7860/`.
 - `OPENAI_API_KEY`: API key for your LLM provider (OpenAI API format)
 - `OPENAI_API_BASE`: Base URL for the Chat Completions endpoint
 - `OPENAI_MODEL`: Model name to use
-- Paper count: `fetch_papers(5)` in `app.py:202–222`
-- Port/host: `app.py:224–225`
+- Paper count: `fetch_papers(5)` in `main.py`
+- Port/host: Configured in `main.py` at the bottom
 
 ## How It Works
-- Fetch papers from Hugging Face: `app.py:21–24`
-- Extract arXiv ID: `app.py:185–187`
-- Build arXiv link: `app.py:173–177`
-- Download and extract full PDF text: `app.py:191–200`
-- Full‑context English summary: `app.py:58–84`, `129–136`
-- Translate JSON to Simplified Chinese: `app.py:98–117`
+- Fetch papers from Hugging Face: `main.py`
+- Extract arXiv ID: `main.py`
+- Build arXiv link: `main.py`
+- Download and extract full PDF text: `main.py`
+- Full‑context English summary: `main.py`
+- Translate JSON to Simplified Chinese: `main.py`
 - Render UI with bilingual content: `templates/index.html`
+- Caches processed papers in `papers_cache.json`
+- Tracks shown papers in `shown_papers.json`
 
 ## Notes
 - Full‑context input may exceed smaller model context windows; choose a model with sufficient capacity.
