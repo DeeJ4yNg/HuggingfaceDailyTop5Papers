@@ -27,13 +27,36 @@ Fetches the top 5 daily papers from Hugging Face Daily Papers API, downloads the
    ```powershell
    $env:OPENAI_API_KEY = "<your_key>"
    $env:OPENAI_API_BASE = "<https://your.openai-compatible.endpoint>"
-   $env:OPENAI_MODEL = "gpt-4o-mini"   # or your provider’s model name
+   $env:OPENAI_MODEL = "gpt-4o-mini"   # or your provider's model name
    ```
 3. Run the server:
    ```powershell
    .\.venv\Scripts\python.exe main.py
    ```
 4. Open `http://127.0.0.1:7860/`.
+
+## Quickstart (uv)
+```bash
+uv venv
+uv pip install -r requirements.txt
+export OPENAI_API_KEY="<your_key>"
+export OPENAI_API_BASE="<https://your.openai-compatible.endpoint>"
+export OPENAI_MODEL="gpt-4o-mini"
+uv run python main.py
+```
+Visit `http://127.0.0.1:7860/`.
+
+## Quickstart (conda)
+```bash
+conda create -n hotpapers python=3.11
+conda activate hotpapers
+pip install -r requirements.txt
+export OPENAI_API_KEY="<your_key>"
+export OPENAI_API_BASE="<https://your.openai-compatible.endpoint>"
+export OPENAI_MODEL="gpt-4o-mini"
+python main.py
+```
+Visit `http://127.0.0.1:7860/`.
 
 ## Quickstart (macOS/Linux)
 ```bash
