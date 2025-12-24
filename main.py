@@ -5,11 +5,7 @@ import asyncio
 from io import BytesIO
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
-
-# 加载.env文件
-from dotenv import load_dotenv
-load_dotenv(override=True)
-
+from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -17,8 +13,16 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from pypdf import PdfReader
 from openai import AsyncOpenAI
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup events"""
+    await initialize_papers()
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 templates = Jinja2Templates(directory="templates")
 
@@ -35,6 +39,12 @@ CACHE_FILE = "papers_cache.json"
 client = None
 if OPENAI_API_KEY:
     client = AsyncOpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_API_BASE)
+
+def sanitize_text(text: str) -> str:
+    """Remove problematic Unicode surrogate characters from text"""
+    if not text:
+        return text
+    return text.encode('utf-8', errors='ignore').decode('utf-8')
 
 # Global variable to hold cached papers
 cached_papers = None
@@ -156,11 +166,11 @@ async def llm_summary_json(title: str, body: str) -> dict:
         return {"en": {"issue": issue, "solution": solution, "steps": steps, "impact": impact}}
     
     messages = [
-        {"role": "system", "content": "You are an AI researcher that summarizes research papers. The paper is in English. Help user to summarize the paper into JSON format. And return only JSON with keys: issue, solution, steps, impact. Steps should be a concise list."},
+        {"role": "system", "content": "You are an AI researcher that summarizes research papers. Return ONLY a valid JSON object with these exact keys: issue, solution, steps, impact. The 'issue' key describes what problem the paper addresses. The 'solution' key describes the main solution. The 'steps' key must be a JSON array of strings describing key steps. The 'impact' key describes the significance. Do NOT include markdown formatting, do NOT use ```json```, do NOT include any other text."},
         {"role": "user", "content": f"Title: {title}\n\nPaper:\n{body}"}
     ]
     try:
-        resp = await client.chat.completions.create(model=OPENAI_MODEL, messages=messages, temperature=0.7)
+        resp = await client.chat.completions.create(model=OPENAI_MODEL, messages=messages, temperature=0.7, response_format={"type": "json_object"})
         out = resp.choices[0].message.content if resp and resp.choices else "{}"
         data_text = extract_json(out)
         data = json.loads(data_text)
@@ -222,18 +232,6 @@ async def translate_text_zh(text: str) -> str:
         return text
 
 async def summarize_chunks(title: str, text: str) -> dict:
-    # Logic: summarize then translate
-    # Note: original code only summarizes the first chunk effectively or passes full text to llm_summary_json?
-    # Original llm_summary_json takes 'body'. 'summarize_paper' calls 'summarize_chunks'.
-    # But 'summarize_chunks' in original code just calls 'llm_summary_json(title, text)'.
-    # It doesn't actually chunk in the original code snippet I saw, despite the name 'summarize_chunks' being there and 'chunk_text' being defined.
-    # Wait, let me check the original 'summarize_chunks' implementation again.
-    # 129: def summarize_chunks(title: str, text: str) -> dict:
-    # 130:    result = llm_summary_json(title, text)
-    # It seems the original code intended to chunk but currently just passes the whole text (or abstract).
-    # I will stick to the original behavior for now to avoid complexity, 
-    # but I'll make it async.
-    
     result = await llm_summary_json(title, text)
     en = result.get("en", {"issue": "", "solution": "", "steps": [], "impact": ""})
     zh = await translate_json_to_zh(en)
@@ -242,9 +240,9 @@ async def summarize_chunks(title: str, text: str) -> dict:
 async def summarize_paper(title: str, abstract: str, full_text: str | None = None):
     text = full_text if full_text else abstract
     if not text:
+        print(f"Empty text for paper {title}")
         return {"issue": "", "solution": "", "steps": [], "impact": ""}
-    # If text is too long, we might need to truncate or chunk.
-    # For now, let's just take the first 12000 chars to be safe with tokens if full_text is used.
+    text = sanitize_text(text)
     if len(text) > 200000:
         text = text[:200000]
     return await summarize_chunks(title, text)
@@ -286,8 +284,6 @@ async def fetch_full_text(arxiv_id: str) -> str:
         async with httpx.AsyncClient() as client:
             r = await client.get(pdf_url, timeout=30.0, follow_redirects=True)
             r.raise_for_status()
-            # PdfReader is synchronous, but for small files it's fast. 
-            # For strict async, run in executor.
             loop = asyncio.get_event_loop()
             text = await loop.run_in_executor(None, _read_pdf, r.content)
             return text
@@ -309,13 +305,9 @@ async def process_paper(p: dict) -> dict:
     full_text = ""
     if aid:
         full_text = await fetch_full_text(aid)
-        
+        if not full_text:
+            print(f"Failed to fetch full text for paper {title} with arxiv id {aid}") 
     title = p.get("title", "")
-    
-    # Run summarization and translation concurrently if possible? 
-    # Actually summarize needs to finish before translation (usually), but translation of title can be parallel.
-    
-    # We can parallelize title translation and summary generation with error handling
     print(f"Processing paper {title} with arxiv id {aid}")
     
     async def safe_summarize():
@@ -380,11 +372,6 @@ async def initialize_papers():
     save_papers_cache(items)
     print("Saved papers to cache")
 
-@app.on_event("startup")
-async def startup_event():
-    """Run when app starts"""
-    await initialize_papers()
-
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     try:
@@ -423,4 +410,4 @@ async def index(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=7860, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=7860, reload=True)
